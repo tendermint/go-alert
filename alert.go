@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/sfreiberg/gotwilio"
+	cfg "github.com/tendermint/go-config"
 )
 
 var lastAlertUnix int64 = 0
 var alertCountSince int = 0
 
 // Sends a critical alert message to administrators.
-func Alert(message string) {
+func Alert(config cfg.Config, message string) {
 	log.Error("<!> ALERT <!>\n" + message)
 	now := time.Now().Unix()
 	if now-lastAlertUnix > int64(config.GetInt("alert_min_interval")) {
@@ -21,17 +22,17 @@ func Alert(message string) {
 			alertCountSince = 0
 		}
 		if len(config.GetString("alert_twilio_sid")) > 0 {
-			go sendTwilio(message)
+			go sendTwilio(config, message)
 		}
 		if len(config.GetString("alert_email_recipients")) > 0 {
-			go sendEmail(message)
+			go sendEmail(config, message)
 		}
 	} else {
 		alertCountSince++
 	}
 }
 
-func sendTwilio(message string) {
+func sendTwilio(config cfg.Config, message string) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error("sendTwilio error", "error", err)
@@ -47,7 +48,7 @@ func sendTwilio(message string) {
 	}
 }
 
-func sendEmail(message string) {
+func sendEmail(config cfg.Config, message string) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error("sendEmail error", "error", err)
@@ -57,7 +58,7 @@ func sendEmail(message string) {
 	if len(subject) > 80 {
 		subject = subject[:80]
 	}
-	err := SendEmail(subject, message, config.GetStringSlice("alert_email_recipients"))
+	err := SendEmail(config, subject, message, config.GetStringSlice("alert_email_recipients"))
 	if err != nil {
 		log.Error("sendEmail error", "error", err, "message", message)
 	}

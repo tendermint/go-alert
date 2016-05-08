@@ -12,15 +12,17 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	cfg "github.com/tendermint/go-config"
 )
 
 // Convenience function
-func SendEmail(subject, body string, tos []string) error {
+func SendEmail(config cfg.Config, subject, body string, tos []string) error {
 	email := Compose(subject, body)
 	email.From = config.GetString("smtp_user")
 	email.ContentType = "text/html; charset=utf-8"
 	email.AddRecipients(tos...)
-	err := email.Send()
+	err := email.Send(config)
 	return err
 }
 
@@ -74,7 +76,7 @@ func (e *Email) AddRecipients(Recipients ...string) {
 }
 
 // Send sends the email, returning any error encountered.
-func (e *Email) Send() error {
+func (e *Email) Send(config cfg.Config) error {
 	if e.From == "" {
 		return errors.New("Error: No sender specified. Please set the Email.From field.")
 	}
